@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <!-- バーコード画像がキャッシュされずに表示されるように -->
+    <meta http-equiv="cache-control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="pragma" content="no-cache">
+    <title>Javaでバーコード生成 (Spring Boot)</title>
+    <link rel="stylesheet" type="text/css" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+
+    <div class="container">
+        <form th:action="@{/barcode}" th:object="${form}" method="post" onsubmit="return validateForm();">
+            <div class="title-and-help">
+                <h1>Javaでバーコード生成 (Spring Boot)</h1>
+                <button id="modal-help-trigger" class="btn help-button" type="button">？ ヘルプ</button>
+            </div>
+            <div class="form-group">
+                <label for="kind">バーコードの種類</label>
+                <select id="kind" th:field="*{kind}" onchange="change_kind();" required>
+                    <optgroup label="1次元バーコード">
+                        <option value="code128">CODE128</option>
+                        <option value="code39">CODE39</option>
+                        <option value="code93">CODE93</option>
+                        <option value="gs1-128">GS1-128</option>
+                        <option value="nw7">NW7 (Codabar)</option>
+                        <option value="jan13">JAN-13 (EAN-13)</option>
+                        <option value="jan8">JAN-8 (EAN-8)</option>
+                        <option value="UPC-A">UPC-A</option>
+                        <option value="UPC-E">UPC-E</option>
+                        <option value="itf">ITF</option>
+                        <option value="matrix2of5">Matrix 2of5</option>
+                        <option value="nec2of5">NEC 2of5</option>
+                        <option value="gs1-Databar-14">GS1 DataBar 標準型</option>
+                        <option value="gs1-Databar-Limited">GS1 DataBar 限定型</option>
+                        <option value="gs1-Databar-Expanded">GS1 DataBar 拡張型</option>
+                    </optgroup>
+                    <optgroup label="2次元バーコード">
+                        <option value="QR">QRコード</option>
+                        <option value="DataMatrix">DataMatrix (GS1対応)</option>
+                        <option value="PDF417">PDF417</option>
+                    </optgroup>
+                    <optgroup label="特殊バーコード">
+                        <option value="conv">標準料金代理収納用コンビニバーコード</option>
+                        <option value="yubin">郵便カスタマバーコード</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <div class="form-group" id="grp_drawType">
+                <label for="drawType">バーコード描画方法</label>
+                <select id="drawType" th:field="*{drawType}" onchange="change_drawType();" required>
+                    <option value="draw" selected>指定幅ピッタリ描画 (標準 推奨</option>
+                    <option value="drawDirect">指定幅内最大で直接描画 (高精度</option>
+                    <option value="drawDelicate">最小描画単位指定で直接描画 (高精度</option>
+                </select>
+            </div>
+
+            <!-- CODE128/GS1-128 固有プロパティ -->
+            <div class="specific-props props-code128" id="grp_codeSet128">
+                <h4>CODE128/GS1-128 設定</h4>
+                <div class="prop-description">AUTO: 自動選択 / CODE-A: 制御文字対応 / CODE-B: 英数字・記号 / CODE-C: 数字ペア（高密度）</div>
+                <div class="form-group">
+                    <label for="codeSet128">コードセット</label>
+                    <select id="codeSet128" th:field="*{codeSet128}" onChange="change_CodeSet128();">
+                        <option value="">AUTO</option>
+                        <option value="A">CODE-A</option>
+                        <option value="B">CODE-B</option>
+                        <option value="C">CODE-C</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- スタート・ストップコード（CODE39/NW7） -->
+            <div class="specific-props props-startstop" id="grp_dispStartStopCode">
+                <h4>CODE39/NW7 設定</h4>
+                <div class="prop-description">スタート・ストップコード: バーコード先頭/末尾の文字</div>
+                <div class="form-group">
+                    <label for="dispStartStopCode">スタート・ストップコード</label>
+                    <select id="dispStartStopCode" th:field="*{dispStartStopCode}" required>
+                        <option value="true" selected>出力する</option>
+                        <option value="false">出力しない</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- QRコード固有プロパティ -->
+            <div class="specific-props props-qr" id="grp_qr">
+                <h4>QRコード設定</h4>
+                <div class="prop-description">誤り訂正: L(7%)&lt;M(15%)&lt;Q(25%)&lt;H(30%) / バージョン: 1～40（大=大容量）</div>
+                <table width="100%" style="table-layout:fixed;">
+                    <tr>
+                        <td>
+                            <div class="form-group">
+                                <label for="qrErrorCorrectionLevel">誤り訂正レベル</label>
+                                <select id="qrErrorCorrectionLevel" th:field="*{qrErrorCorrectionLevel}" required>
+                                    <option value="L">L (7%)</option>
+                                    <option value="M" selected>M (15%)</option>
+                                    <option value="Q">Q (25%)</option>
+                                    <option value="H">H (30%)</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="form-group">
+                                <label for="qrVersion">バージョン(0: 自動、1～40: 固定)</label>
+                                <input id="qrVersion" type="number" min="0" max="40" title="0: Auto, 1-40: Fixed" th:field="*{qrVersion}" required />
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- DataMatrix固有プロパティ -->
+            <div class="specific-props props-datamatrix" id="grp_datamatrix">
+                <h4>DataMatrix設定</h4>
+                <div class="prop-description">AUTOで最適サイズ自動選択。GS1用は{FNC1}で開始</div>
+                <div class="form-group">
+                    <label for="dataMatrixCodeSize">シンボルコードサイズ</label>
+                    <select id="dataMatrixCodeSize" th:field="*{dataMatrixCodeSize}" required>
+                        <option value="-2">AUTO</option>
+                        <option value="0">10x10</option>
+                        <option value="1">12x12</option>
+                        <option value="2">14x14</option>
+                        <option value="3">16x16</option>
+                        <option value="4">18x18</option>
+                        <option value="5">20x20</option>
+                        <option value="6">22x22</option>
+                        <option value="7">24x24</option>
+                        <option value="8">26x26</option>
+                        <option value="9">32x32</option>
+                        <option value="10">36x36</option>
+                        <option value="11">40x40</option>
+                        <option value="12">44x44</option>
+                        <option value="13">48x48</option>
+                        <option value="14">52x52</option>
+                        <option value="15">64x64</option>
+                        <option value="16">72x72</option>
+                        <option value="17">80x80</option>
+                        <option value="18">88x88</option>
+                        <option value="19">96x96</option>
+                        <option value="20">104x104</option>
+                        <option value="21">120x120</option>
+                        <option value="22">132x132</option>
+                        <option value="23">144x144</option>
+                        <option value="24">8x18</option>
+                        <option value="25">8x32</option>
+                        <option value="26">12x26</option>
+                        <option value="27">12x36</option>
+                        <option value="28">16x36</option>
+                        <option value="29">16x48</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- PDF417固有プロパティ -->
+            <div class="specific-props props-pdf417" id="grp_pdf417">
+                <h4>PDF417設定</h4>
+                <div class="prop-description">誤り訂正: 0～8（大=高訂正力） / アスペクト比: 縦横比 / サイズ種別: カラム・行数制御</div>
+                <table width="100%" style="table-layout:fixed;">
+                    <tr>
+                        <td>
+                            <div class="form-group">
+                                <label for="pdf417ErrorCorrectionLevel">誤り訂正レベル</label>
+                                <select id="pdf417ErrorCorrectionLevel" th:field="*{pdf417ErrorCorrectionLevel}" required>
+                                    <option value="AUTO" selected>AUTO</option>
+                                    <option value="0">0</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                    <option value="7">7</option>
+                                    <option value="8">8</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="form-group">
+                                <label for="pdf417AspectRatio">アスペクト(縦横)比</label>
+                                <select id="pdf417AspectRatio" th:field="*{pdf417AspectRatio}" required>
+                                    <option value="0.5" selected ="true">0.5</option>
+                                    <option value="1.0">1.0</option>
+                                    <option value="2.0">2.0</option>
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div class="form-group2">
+                                <label for="pdf417SizeKind">サイズ種別</label>
+                                <select id="pdf417SizeKind" th:field="*{pdf417SizeKind}"  onChange="change_cols_rows_enabled();">
+                                    <option value="AUTO" selected ="true">AUTO</option>
+                                    <option value="COL_NUM">データカラム数を指定</option>
+                                    <option value="ROW_NUM">データ行数を指定</option>
+                                    <option value="COL_NUM_AND_ROW_NUM">データカラム数とデータ行数を指定</option>
+                                </select>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <div class="form-group">
+                                <label for="pdf417Cols">DATA列数(option)</label>
+                                <input id="pdf417Cols" type="number" th:field="*{pdf417Cols}" required />
+                            </div>
+                        </td>
+                        <td>
+                            <div class="form-group">
+                                <label for="pdf417Rows">DATA行数(option)</label>
+                                <input id="pdf417Rows" type="number" th:field="*{pdf417Rows}" required />
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- 全角エンコード -->
+            <div class="specific-props props-encode" id="grp_encode">
+                <h4>文字エンコード</h4>
+                <div class="prop-description">日本語等の全角文字用。通常はUTF-8推奨</div>
+                <div class="form-group">
+                    <label for="encode">全角文字エンコード</label>
+                    <select id="encode" th:field="*{encode}" required>
+                        <option value="UTF-8" selected>UTF-8</option>
+                        <option value="SJIS">SJIS</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- DataBar 14 タイプ -->
+            <div class="specific-props props-databar" id="grp_typeDatabar14">
+                <h4>DataBar 標準型</h4>
+                <div class="prop-description">標準型=全方向読取 / 二層型=低高さ / 標準二層型=全方向+2段</div>
+                <div class="form-group">
+                    <label for="typeDatabar14">Databar 14 タイプ</label>
+                    <select id="typeDatabar14" th:field="*{typeDatabar14}" required>
+                        <option value="Omni-directional">標準型 Omni-directional</option>
+                        <option value="Stacked">二層型 Stacked</option>
+                        <option value="Stacked Omni-directional">標準二層型 Stacked Omni-directional</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- DataBar Expanded タイプ -->
+            <div class="specific-props props-databar" id="grp_typeDatabarExpanded">
+                <h4>DataBar 拡張型</h4>
+                <div class="prop-description">一層型=横長 / 多層型=複数行（狭スペース向け）</div>
+                <div class="form-group">
+                    <label for="typeDatabarExpanded">Databar Expanded タイプ</label>
+                    <select id="typeDatabarExpanded" th:field="*{typeDatabarExpanded}" required>
+                        <option value="UnStacked">一層型 UnStacked</option>
+                        <option value="Stacked">多層型 Stacked</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 入力ヒント表示 -->
+            <div id="inputHint" class="input-hint"></div>
+
+            <!-- 入力候補ドロップダウン（GS1-128） -->
+            <div id="grp_codeGs1128" class="input-assist">
+                <label for="codeGs1128">GS1-128 入力補助（選択するとコードを入力します）</label>
+                <select name="codeGs1128" id="codeGs1128" onChange="change_Gs1128CodeSupport();">
+                    <option value="">GS1-128 データパターン入力補助...</option>
+                    <optgroup label="基本パターン">
+                        <option value="{FNC1}0100012345678905{AI}10ABC123">{FNC1}(01)商品識別 + {AI}(10)バッチ: (01)00012345678905(10)ABC123</option>
+                        <option value="{FNC1}0100012345678905{FNC1}17251231">{FNC1}(01)商品識別 + {FNC1}(17)有効期限: (01)00012345678905(17)251231</option>
+                        <option value="{FNC1}0100012345678905{FNC1}21SERIAL123">{FNC1}(01)商品識別 + {FNC1}(21)シリアル: (01)00012345678905(21)SERIAL123</option>
+                        <option value="{FNC1}01000123456789051511250031001234">{FNC1}(01)商品識別 + (15)期限 + (30)数量</option>
+                    </optgroup>
+                    <optgroup label="計量商品（重量・価格）">
+                        <option value="{FNC1}01900123456789083103001750">{FNC1}(01) + (3103)重量kg(0.001): (01)90012345678908(3103)001750</option>
+                        <option value="{FNC1}01900123456789083202000156">{FNC1}(01) + (3202)重量lb(0.01): (01)90012345678908(3202)000156</option>
+                        <option value="{FNC1}0190012345678908392207950">{FNC1}(01) + (3922)価格: (01)90012345678908(3922)07950</option>
+                    </optgroup>
+                    <optgroup label="計量商品+日付">
+                        <option value="{FNC1}0190012345678908310301223311991231">{FNC1}(01) + (3103)重量 + (11)製造年月日</option>
+                        <option value="{FNC1}0190012345678908310301223315991231">{FNC1}(01) + (3103)重量 + (15)品質保持期限</option>
+                        <option value="{FNC1}0190012345678908310301223317991231">{FNC1}(01) + (3103)重量 + (17)有効期限</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 入力候補ドロップダウン（コンビニバーコード） -->
+            <div id="grp_codeConv" class="input-assist">
+                <label for="codeConv">コンビニバーコード 入力補助（選択するとコードを入力します）</label>
+                <select name="codeConv" id="codeConv" onChange="change_ConvCodeSupport();">
+                    <option value="">コンビニバーコード サンプルコード...</option>
+                    <optgroup label="料金収納（91: 標準料金代理収納）">
+                        <option value="{FNC1}9191234500000000000000452087500401310029500">電気料金例: 91-91234500000000000000452087500401310029500</option>
+                        <option value="{FNC1}9100000000000000000000100000000000000000001">最小例: 91-0...0-100円-0...0-1</option>
+                    </optgroup>
+                    <optgroup label="払込票（91: EAN-128払込票）">
+                        <option value="{FNC1}9112345678901234567890123456789012345678901">払込票例1: 91-123456789012345678901234567890123456789-01</option>
+                        <option value="{FNC1}9198765432109876543210987654321098765432100">払込票例2: 91-987654321098765432109876543210987654321-00</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 入力候補ドロップダウン（郵便カスタマ） -->
+            <div id="grp_codeYubin" class="input-assist">
+                <label for="codeYubin">郵便カスタマバーコード 入力補助（選択するとコードを入力します）</label>
+                <select name="codeYubin" id="codeYubin" onChange="change_YubinCodeSupport();">
+                    <option value="">郵便カスタマバーコード サンプルコード...</option>
+                    <optgroup label="郵便番号+住所表示番号">
+                        <option value="27500263-29-2-401">例1: 275-0026 + 3-29-2-401</option>
+                        <option value="1638001-2-10-10-204">例2: 163-8001 + 2-10-10-204（新宿区役所）</option>
+                        <option value="1050011-1-1">例3: 105-0011 + 1-1（芝公園）</option>
+                        <option value="6000000">例4: 600-0000（郵便番号のみ）</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 入力候補ドロップダウン（GS1 DataBar 標準型） -->
+            <div id="grp_codeDatabar14" class="input-assist">
+                <label for="codeDatabar14">GS1 DataBar 標準型 入力補助（選択するとコードを入力します）</label>
+                <select name="codeDatabar14" id="codeDatabar14" onChange="change_Databar14CodeSupport();">
+                    <option value="">GS1 DataBar 標準型 サンプルコード...</option>
+                    <option value="12345678">GTIN-8例: 12345678 (8桁)</option>
+                    <option value="123456789012">GTIN-12例: 123456789012 (12桁、UPC-A)</option>
+                    <option value="1234567890128">GTIN-13例1: 1234567890128 (13桁、EAN-13)</option>
+                    <option value="4912345678904">GTIN-13例2: 4912345678904 (13桁、JAN-13)</option>
+                </select>
+            </div>
+
+            <!-- 入力候補ドロップダウン（GS1 DataBar 限定型） -->
+            <div id="grp_codeDatabarLimited" class="input-assist">
+                <label for="codeDatabarLimited">GS1 DataBar 限定型 入力補助（選択するとコードを入力します）</label>
+                <select name="codeDatabarLimited" id="codeDatabarLimited" onChange="change_DatabarLimitedCodeSupport();">
+                    <option value="">GS1 DataBar 限定型 サンプルコード...</option>
+                    <option value="0123456789012">先頭0例1: 01234567890128 (13桁)</option>
+                    <option value="0491234567890">先頭0例2: 04912345678904 (13桁)</option>
+                    <option value="1012345678901">先頭1例1: 10123456789012 (13桁)</option>
+                    <option value="1234567890">短縮例: 1234567890 (10桁→ゼロパディング)</option>
+                </select>
+            </div>
+
+            <!-- 入力候補ドロップダウン（GS1 DataBar 拡張型） -->
+            <div id="grp_codeDatabarExpanded" class="input-assist">
+                <label for="codeDatabarExpanded">GS1 DataBar 拡張型 入力補助（選択するとコードを入力します）</label>
+                <select name="codeDatabarExpanded" id="codeDatabarExpanded" onChange="change_DatabarExpandedCodeSupport();">
+                    <option value="">(候補未選択)</option>
+                    <optgroup label="基本パターン（{AI}使用）">
+                        <option value="0100012345678905{AI}10ABC123">(01)商品識別コード＋{AI}(10)バッチ: (01)00012345678905(10)ABC123</option>
+                        <option value="0100012345678905{AI}21SERIAL123">(01)商品識別コード＋{AI}(21)シリアル</option>
+                        <option value="123{AI}17ABCDEFGHIJKLMNOPQRSTUVWXYZ!?">AIなし 又は 任意のAI（非01）: 123(17)ABCDEFGH...</option>
+                    </optgroup>
+                    <optgroup label="計量商品">
+                        <option value="01900123456789083103001750">(01)商品識別コード＋(3103)計量商品の計測値(0.001Kg)</option>
+                        <option value="01900123456789083202000156">(01)商品識別コード＋(3202)計量商品の計測値(0.01lb)</option>
+                        <option value="019001234567890839320401234">(01)商品識別コード＋(393x)計量商品金額（ISO通貨コード）</option>
+                    </optgroup>
+                    <optgroup label="計量商品+日付">
+                        <option value="0190012345678908310301223311991231">(01)商品識別コード＋(310x)計量商品＋(11)製造年月日</option>
+                        <option value="0190012345678908310301223315991231">(01)商品識別コード＋(310x)計量商品＋(15)品質保持期限日</option>
+                        <option value="0190012345678908310301223317991231">(01)商品識別コード＋(310x)計量商品＋(17)有効期限</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- 入力候補ドロップダウン（GS1 DataMatrix） -->
+            <div id="grp_codeDataMatrix" class="input-assist">
+                <label for="codeDataMatrix">GS1-DataMatrix 入力補助（選択するとコードを入力します）</label>
+                <select name="codeDataMatrix" id="codeDataMatrix" onChange="change_DataMatrixCodeSupport();">
+                    <option value="">GS1-DataMatrix データパターン入力補助...</option>
+                    <optgroup label="基本パターン">
+                        <option value="{FNC1}0100012345678905{FNC1}10ABC123">{FNC1}(01)商品識別 + {FNC1}(10)バッチ</option>
+                        <option value="{FNC1}0100012345678905{FNC1}17251231">{FNC1}(01)商品識別 + {FNC1}(17)有効期限</option>
+                        <option value="{FNC1}0100012345678905{FNC1}21SERIAL123">{FNC1}(01)商品識別 + {FNC1}(21)シリアル</option>
+                    </optgroup>
+                    <optgroup label="計量商品（重量・価格）">
+                        <option value="{FNC1}01900123456789083103001750">{FNC1}(01) + (3103)重量kg(0.001)</option>
+                        <option value="{FNC1}0190012345678908392207950">{FNC1}(01) + (3922)価格</option>
+                    </optgroup>
+                </select>
+            </div>
+
+
+            <!-- CODE-A 制御コード挿入（コード入力欄の上） -->
+            <div class="form-group" id="grp_EscString">
+                <label for="EscString">CODE-A 制御コード挿入</label>
+                <select name="EscString" id="EscString" onChange="change_EscString();">
+                    <option value="">10進      16進    文字</option>
+                    <option value="NUL">0      0x00    NUL（null文字)</option>
+                    <option value="SOH">1      0x01    SOH（ヘッダ開始）</option>
+                    <option value="STX">2      0x02    STX（テキスト開始）</option>
+                    <option value="ETX">3      0x03    ETX（テキスト終了）</option>
+                    <option value="EOT">4      0x04    EOT（転送終了）</option>
+                    <option value="ENQ">5      0x05    ENQ（照会）</option>
+                    <option value="ACK">6      0x06    ACK（受信ＯＫ）</option>
+                    <option value="BEL">7      0x07    BEL（警告）</option>
+                    <option value="BS">8      0x08    BS（後退）</option>
+                    <option value="HT">9      0x09    HT（水平タブ）</option>
+                    <option value="LF">10     0x0a    LF（改行）</option>
+                    <option value="VT">11     0x0b    VT（垂直タブ）</option>
+                    <option value="FF">12     0x0c    FF（改頁）</option>
+                    <option value="CR">13     0x0d    CR（復帰）</option>
+                    <option value="SO">14     0x0e    SO（シフトアウト）</option>
+                    <option value="SI">15     0x0f    SI（シフトイン）</option>
+                    <option value="DLE">16     0x10    DLE（データリンクエスケープ）</option>
+                    <option value="DC1">17     0x11    DC1（装置制御１）</option>
+                    <option value="DC2">18     0x12    DC2（装置制御２）</option>
+                    <option value="DC3">19     0x13    DC3（装置制御３）</option>
+                    <option value="DC4">20     0x14    DC4（装置制御４）</option>
+                    <option value="NAK">21     0x15    NAK（受信失敗）</option>
+                    <option value="SYN">22     0x16    SYN（同期）</option>
+                    <option value="ETB">23     0x17    ETB（転送ブロック終了）</option>
+                    <option value="CAN">24     0x18    CAN（とりけし）</option>
+                    <option value="EM">25     0x19    EM（メディア終了）</option>
+                    <option value="SUB">26     0x1a    SUB（置換）</option>
+                    <option value="ESC">27     0x1b    ESC（エスケープ）</option>
+                    <option value="FS">28     0x1c    FS（フォーム区切り）</option>
+                    <option value="GS">29     0x1d    GS（グループ区切り）</option>
+                    <option value="RS">30     0x1e    RS（レコード区切り）</option>
+                    <option value="US">31     0x1f    US（ユニット区切り）</option>
+                </select>
+            </div>
+
+            <label for="code">バーコードに変換する文字列</label>
+            <input id="code" type="text" th:field="*{code}" required />
+
+            <table width="100%" style="table-layout:fixed;">
+                <tr>
+                    <td>
+                        <div class="form-group">
+                        <label for="x">描画位置-X (Left)</label>
+                        <input id="x" type="number" th:field="*{x}" required />
+                        </div>
+                    </td>
+                    <td>
+                        <div class="form-group">
+                            <label for="y">描画位置-Y (Top)</label>
+                            <input id="y" type="number" th:field="*{y}" required />
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="form-group" id="grp_width">
+                            <label for="width" id="lbl_width">バーコードの幅</label>
+                            <input id="width" type="number" th:field="*{width}" required />
+                        </div>
+
+                    </td>
+                    <td>
+                        <div class="form-group" id="grp_height">
+                            <label for="height">バーコードの高さ</label>
+                            <input id="height" type="number" th:field="*{height}" required />
+                            </div>
+                        </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="form-group" id="grp_fontSize">
+                            <label for="fontSize">フォントサイズ</label>
+                            <input id="fontSize" type="number" th:field="*{fontSize}" min="1" max="72" value="14" style="width: 70px;" /> pt
+                        </div>
+                    </td>
+                    <td></td>
+                </tr>
+
+            </table>
+
+            <div id="grp_colors" style="display: flex; align-items: center; gap: 15px; margin-top: 10px; margin-bottom: 10px;">
+                <label for="foreColor" style="white-space: nowrap;">バーコードの色</label>
+                <input type="color" id="foreColorPicker" value="#000000" onchange="syncForeColor(this.value);" style="width: 40px; height: 30px; padding: 0; border: 1px solid #ccc;" />
+                <span>#</span>
+                <input id="foreColor" type="text" th:field="*{foreColor}" maxlength="6" style="width: 70px;" onchange="syncForeColorPicker(this.value);" />
+
+                <label for="backColor" style="white-space: nowrap; margin-left: 20px;">背景色</label>
+                <input type="color" id="backColorPicker" value="#FFFFFF" onchange="syncBackColor(this.value);" style="width: 40px; height: 30px; padding: 0; border: 1px solid #ccc;" />
+                <span>#</span>
+                <input id="backColor" type="text" th:field="*{backColor}" maxlength="6" style="width: 70px;" onchange="syncBackColorPicker(this.value);" />
+
+                <label style="display: flex; align-items: center; white-space: nowrap; margin-left: 10px;">
+                    <input type="checkbox" id="transparentBackground" name="transparentBackground" th:checked="${form.transparentBackground}" onchange="toggleTransparent();" />
+                    <span style="margin-left: 5px;">透明</span>
+                </label>
+            </div>
+
+            <hr>
+            <div style="display: flex; align-items:center; justify-content: flex-start;">
+                <table>
+                    <tr>
+                      <td width="150" style="vertical-align: top;">
+                        <div class="option-container">
+                          <label>
+                            <input type="checkbox" name="browser" value="browser" checked disabled>
+                            <span style="margin-left: 5px;">ブラウザ出力</span>
+                          </label>
+                        </div>
+                      </td>
+                      <td width="170" style="vertical-align: top;">
+                        <div class="option-container">
+                          <label>
+                            <input type="checkbox" id="download" name="download" style="margin-left: 5px;">
+                            <span style="margin-left: 5px;">画像ダウンロード</span>
+                          </label>
+                        </div>
+                      </td>
+                      <td style="vertical-align: top;">
+                        <div class="option-container">
+                          <label>
+                            <input type="checkbox" id="pdf" name="pdf" value="true" style="margin-left: 5px;">
+                            <span style="margin-left: 5px;">PDF出力</span>
+                          </label>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="vertical-align: top;">
+                        <div id="browser_options">
+                          <select id="browser_select" name="browser_select" th:field="*{imageTransferMethod}" onchange="change_imageTransferMethod();">
+                            <option value="image_data">画像データ渡し(getImageBase64)</option>
+                            <option value="image_file">画像ファイル渡し</option>
+                            <option value="svg">SVGで描画</option>
+                          </select>
+                          <div id="includeMargin_options" style="display: none; margin-top: 3px;">
+                            <label style="font-size: 0.85em; white-space: nowrap;">
+                              <input type="checkbox" id="includeMargin" name="includeMargin" th:checked="${form.includeMargin}">
+                              X/Y座標マージンを含める
+                            </label>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="vertical-align: top;">
+                        <div id="format_options">
+                          <select id="format_select" name="format_select" th:field="*{imageFormat}">
+                            <option value="PNG">PNG</option>
+                            <option value="SVG">SVG</option>
+                            <option value="JPEG">JPEG</option>
+                            <option value="BMP">BMP</option>
+                          </select>
+                        </div>
+                      </td>
+                      <td style="vertical-align: top;">
+                        <div id="pdf_options">
+                          <select id="pdf_select" name="pdf_select" style="display:none;" th:field="*{pdfOption}">
+                            <option value="image_file">画像ファイル埋め込み</option>
+                            <option value="graphics2d">Graphics2Dで描画</option>
+                          </select>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <input type="submit" value="バーコード生成" style="margin-left: auto; margin-right: 5px;" />
+
+            </div>
+           </form>
+
+
+            <!-- SVG未対応の場合のエラーメッセージ -->
+            <div th:if="${svgNotSupported}" style="color: red; font-weight: bold; padding: 10px; border: 1px solid red; margin-bottom: 10px;">
+                このバーコードタイプはSVG出力に対応していません。
+            </div>
+            <!-- バーコード描画キャンバス（薄い背景色で透過との区別をつける） -->
+            <div class="barcode-canvas">
+                <!-- 画像ファイル または、BASE64の画像データがth:srcに入ってくる  -->
+                <!-- 画像ファイル渡し、またはマージン含めないモードの場合はCSS positionでX/Y座標に配置 -->
+                <img id="barcodeImage" th:src="@{${imgFilename}}" th:unless="${svgNotSupported}"
+                     th:style="${form.imageTransferMethod == 'image_file' || !form.includeMargin} ? 'position: absolute; left: ' + ${form.x} + 'px; top: ' + ${form.y} + 'px;' : ''"/>
+            </div>
+
+            <!-- こちらも使えます-A 画像ファイル または、BASE64の画像データがsrcに入ってくる
+            <img id="barcode-image" src="" alt="Barcode Image" />-->
+
+    </div>
+
+    <!-- サーバからポストされた事を通知するための領域 -->
+    <input type="hidden" id="posted" name="posted" th:value="${posted}" />
+
+
+    <!-- 以下 PDF出力時のウィンドウ用 -->
+    <div id="modal" class="modal">
+        <p>PDFが作成されました。処理を選択してください。</p>
+        <div class="button-container">
+
+            <input type="button" class="btn btn-view" value="PDFをブラウザに表示(別のタブ)" style="margin-left: auto; margin-right: 5px;"
+            th:onclick="'window.open(\'' + @{/pdf(download=false)} + '\', target=\'_blank\');closeModal();'" />
+            <input type="button" class="btn btn-download" value="PDFをダウンロード" style="margin-left: auto; margin-right: 5px;"
+            th:onclick="'location.href=\'' + @{/pdf(download=true)} + '\'; closeModal();'" />
+
+        <!-- 直接起動では動作するが、コンテナで動作しないため上記のブラウザ表示・ダウンロード処理をコントローラを書きました。
+            <a href="/barcode.pdf" class="btn btn-view" target="_blank" onclick="closeModal()">PDFをブラウザに表示(別のタブ)</a>
+          <a href="/barcode.pdf" class="btn btn-download" download="barcode.pdf" onclick="closeModal()">PDFをダウンロード</a>
+        -->
+        </div>
+        <span class="close">&times;</span>
+    </div>
+
+    <div id="modal_help" class="modal-overlay">
+        <div class="modal_help">
+          <span class="close">&times;</span>
+          <p>注1)《GS1 DataMatrix / GS1 128のフィールドセパレータ入力方法》<br>
+            AI識別子の前に{FNC1}または{AI}と入力(挿入)してください。
+            <br>{FNC1}はフィールドセパレータFNC1を挿入。{AI}も同様。</p>
+          <p>注2) 《GS1 Databar 拡張型(Expanded)のフィールドセパレータ入力方法》<br>
+            決められたAI識別子は自動で入力されます。頭の商品識別コード前の(01)などです。<br>
+            任意のAIのみ{AI}を入力(挿入)してください。カッコ()付添え字を出力するためです。<br>
+            例えば入力コードに&quot;{AI}21&quot;を指定した場合、添え字には(21)と出力されます。</p>
+          <p>注3）「スタート・ストップコード出力」は、CODE39/NW7 にのみ有効です。</p>
+          <p>注4) JAN8は8桁、JAN13は13桁を正しいチェックディジットで入力してください。<br>
+            一桁少ない場合、自動的にチェックディジットを計算してバーコードを出力します。</p>
+          <p>注5) UPC-Aは11桁か、12桁を指定してください。<br>
+            11桁の場合チェックキャラクタを自動付与します。</p>
+          <p>注6) UPC-Eは6桁～8桁を指定してください。6桁の場合チェックキャラクタを自動付与します。<br>
+            6桁/7桁の場合、先頭の0を自動付与します。<br>
+            8桁の場合、先頭は0、末尾(8桁目)には正しいチェックディジットを入力してください。</p>
+        </div>
+      </div>
+
+<!-- <script type="text/javascript"> -->
+<script th:inline="javascript">
+
+    // バーコード種類ごとの入力ヒント
+    const barcodeHints = {
+        'code128': 'ASCII文字全般が使用可能です。制御文字は「制御コード挿入」から《CR》《LF》等の形式で入力できます',
+        'code39': '数字（0-9）、英字大文字（A-Z）、記号（- . スペース $ / + %）が使用可能です',
+        'code93': 'ASCII文字全般が使用可能です（数字、英字大文字/小文字、記号）',
+        'gs1-128': 'GS1-128: 可変長フィールドの前に{FNC1}を入力。固定長AIで括弧表示が必要な場合は{AI}XXを使用。例: {FNC1}0100012345678905{AI}10ABC123',
+        'nw7': '数字（0-9）、記号（- $ : / . +）が使用可能。スタート/ストップコードはA/B/C/Dから選択',
+        'jan13': '12桁の数字を入力してください。13桁目のチェックディジットは自動計算されます。日本の商品コードは49または45から始まります',
+        'jan8': '7桁の数字を入力してください。8桁目のチェックディジットは自動計算されます。日本の商品コードは49から始まります',
+        'UPC-A': 'UPC-A: 11桁または12桁の数字。11桁の場合チェックディジット自動付与。北米の商品コード',
+        'UPC-E': 'UPC-E: 6~7桁の数字。6桁の場合チェックディジット自動付与。6/7桁は先頭0自動付与',
+        'itf': '13桁の数字を入力してください。14桁目のチェックディジットは自動計算されます。物流用バーコードです',
+        'matrix2of5': '数字のみ（0-9）を入力してください',
+        'nec2of5': '数字のみ（0-9）を入力してください',
+        'gs1-Databar-14': 'GS1 DataBar 標準型: 8-13桁の数字。13桁未満は左ゼロパディング。チェックディジット自動計算で14桁(GTIN-14)',
+        'gs1-Databar-Limited': 'GS1 DataBar 限定型: 8-13桁の数字。13桁未満は左ゼロパディング。先頭桁は0または1のみ（制約あり）',
+        'gs1-Databar-Expanded': 'GS1 DataBar 拡張型: {AI}XXでAI括弧表示、{FNC1}は自動挿入。数字最大74桁、英数字最大41文字',
+        'QR': 'QRコード: 日本語を含むあらゆる文字を格納可能。URLやテキスト等を自由に入力してください',
+        'DataMatrix': 'DataMatrix: GS1-DataMatrixとして使用する場合は先頭に{FNC1}を入力。{FNC1}でAI区切り。日本語も使用可能',
+        'PDF417': 'PDF417: 大量のデータを格納可能な2次元バーコード。日本語も使用可能',
+        'conv': '標準料金代理収納用コンビニバーコード: GS1-128形式。先頭に{FNC1}が必要。43桁の数字（末尾チェックディジットは自動付与で44桁）。先頭91は料金収納を示すAI',
+        'yubin': '郵便カスタマバーコード: 郵便番号7桁 + 住所表示番号（ハイフン区切り可）。例: 2750026-3-29-2-401'
+    };
+
+    function closeModal() {
+        document.getElementById("modal").style.display = "none";
+      }
+
+    window.onload = function(){
+
+        const posted = document.getElementById("posted").value;
+        if(posted != "posted")
+        {
+            // ポスト後でなければ、初期表示のためセッション変数をクリア
+            sessionStorage.removeItem("drawType");
+            sessionStorage.removeItem("kind");
+            sessionStorage.removeItem("kind2");
+            sessionStorage.removeItem("downloadChecked");
+            sessionStorage.removeItem("pdfChecked");
+
+            //　ポスト後でなければ、イメージ領域も無くす
+            //var img = document.querySelector('img[src="/barcode.png"]');
+            //if (img) {
+            //  img.src = ''; // 画像のソースを空にすることで画像を削除する
+            //}
+
+        }
+        else
+        {
+
+            //　サーバからのポスト後であれば、イメージ領域を設定
+
+
+            // バーコード画像のリフレッシュ(固定ファイルの方)
+            let imgElement = document.getElementById("barcodeImage");
+            if(imgElement.length < 30) {
+                imgElement.src = imgElement.src + "?" + new Date().getTime(); // ランダムなクエリパラメータを付けることでキャッシュを回避
+            }
+/*          こちらも使えます-A
+            // バーコード画像を取得
+            const barcodeImg = document.getElementById("barcode-image");
+            const imageBase64 = "imageBase64";
+
+            // 画像データが存在する場合
+            if (imageBase64) {
+                // base64エンコードされた画像データをimgタグのsrc属性に設定する
+                barcodeImg.src = imageBase64;
+            } else {
+                // 画像ファイルを指定する場合
+                barcodeImg.src = "/images/barcode.png";
+            }
+*/
+            // セッションストレージからダウンロードチェックの状態を取得し、チェックボックスに反映する
+            const downloadChecked = sessionStorage.getItem('downloadChecked');
+            const downloadCheckbox = document.getElementById('download');
+            if (downloadChecked === 'true') {
+                downloadCheckbox.checked = true;
+            }
+
+            // ポスト後であれば、画像ができているはずなので、
+            // ダウンロードにチェックが入っている場合、画像をダウンロード
+            const download = downloadCheckbox.checked;
+            if(download) downloadBarcodeImage();
+
+
+            // セッションストレージからPDF出力チェックの状態を取得し、チェックボックスに反映する
+            const pdfChecked = sessionStorage.getItem('pdfChecked');
+            const pdfCheckbox = document.getElementById('pdf');
+            if (pdfChecked === 'true') {
+                pdfCheckbox.checked = true;
+            }
+
+            // ポスト後であれば、PDFができているはずなので、
+            // PDF出力にチェックが入っている場合、PDFを表示・ダウンロード
+            const pdf = pdfCheckbox.checked;
+            if(pdf)
+            {
+                // pdf_selectの表示・非表示を切り替える
+                var pdfSelect = document.getElementById("pdf_select");
+                pdfSelect.style.display = "block";
+
+                // PDF表示用小画面表示
+                ShowPDF();
+            }
+
+            // セッションストレージから描画方法の選択を復元
+            const savedDrawType = sessionStorage.getItem('drawType');
+            if (savedDrawType) {
+                document.getElementById('drawType').value = savedDrawType;
+            }
+
+        }
+
+        change_kind();
+        // change_kind() の最後に呼び出しているので削除
+        //change_drawType();
+
+        // マージンチェックボックスの表示状態を初期化
+        change_imageTransferMethod();
+
+        // ダウンロードチェックボックスのクリックイベントを登録する
+        const downloadCheckbox = document.getElementById('download');
+        downloadCheckbox.addEventListener('click', function() {
+            sessionStorage.setItem('downloadChecked', downloadCheckbox.checked);
+        });
+
+        // ダウンロードチェックボックスのクリックイベントを登録する
+        const pdfCheckbox = document.getElementById('pdf');
+        pdfCheckbox.addEventListener('click', function() {
+            sessionStorage.setItem('pdfChecked', pdfCheckbox.checked);
+        });
+
+        // カラーピッカーの初期値をテキスト入力から同期
+        syncForeColorPicker(document.getElementById('foreColor').value);
+        syncBackColorPicker(document.getElementById('backColor').value);
+
+        // 初期表示時（ポスト後でない場合）は透過チェックボックスをデフォルトONにする
+        if(posted != "posted") {
+            const method = document.getElementById("browser_select").value;
+            const format = document.getElementById("format_select").value;
+            // SVG以外はデフォルトで透過ON
+            if(method !== "svg" && format !== "SVG") {
+                document.getElementById("transparentBackground").checked = true;
+            }
+        }
+
+        // 透明チェックボックスの状態を初期化
+        updateTransparentCheckboxState();
+
+        // フォーマット選択の変更イベントを登録
+        const formatSelect = document.getElementById('format_select');
+        formatSelect.addEventListener('change', function() {
+            updateTransparentCheckboxState();
+        });
+
+    }
+
+    // 入力候補選択の処理
+    function change_Gs1128CodeSupport() {
+        var val = document.getElementById("codeGs1128").value;
+        if(val) document.getElementById("code").value = val;
+    }
+
+    function change_ConvCodeSupport() {
+        var val = document.getElementById("codeConv").value;
+        if(val) document.getElementById("code").value = val;
+    }
+
+    function change_YubinCodeSupport() {
+        var val = document.getElementById("codeYubin").value;
+        if(val) document.getElementById("code").value = val;
+    }
+
+    function change_Databar14CodeSupport() {
+        var val = document.getElementById("codeDatabar14").value;
+        if(val) document.getElementById("code").value = val;
+    }
+
+    function change_DatabarLimitedCodeSupport() {
+        var val = document.getElementById("codeDatabarLimited").value;
+        if(val) document.getElementById("code").value = val;
+    }
+
+    function change_DatabarExpandedCodeSupport() {
+        document.getElementById("code").value = document.getElementById("codeDatabarExpanded").value;
+    }
+
+    function change_DataMatrixCodeSupport() {
+        var val = document.getElementById("codeDataMatrix").value;
+        if(val) document.getElementById("code").value = val;
+    }
+
+    function change_drawType() {
+
+        // 「描画方法」か「バーコードの種類」が変更されていれば、flgChange = true;
+        const s_drawType = sessionStorage.getItem("drawType");
+        const s_kind2 = sessionStorage.getItem("kind2");
+
+        const drawType = document.getElementById("drawType").value;
+        const kind = document.getElementById("kind").value;
+
+        // 以降、「描画方法」か「バーコードの種類」が
+        // 変更されていればる時(flgChang:true)だけ初期「値」を変更
+        let flgChange = true;
+
+        if((s_drawType != null && s_drawType == drawType)
+        && (s_kind2 != null && s_kind2 == kind)) flgChange = false;
+
+        // セッションに描画方法とバーコードの種類をセット
+        sessionStorage.setItem("drawType",drawType);
+        sessionStorage.setItem("kind2",kind);
+
+
+        if(drawType != "drawDelicate")
+        {
+            if(kind != "yubin")
+            {
+                // 幅を表示
+                document.getElementById("grp_width").style.display ="flex";
+                document.getElementById("lbl_width").innerText = 'バーコードの幅';
+
+
+                if(flgChange) document.getElementById("width").value = "300";
+
+                // 一次元バーコード
+                if(kind != "QR" && kind != "DataMatrix" && kind != "PDF417")
+                {
+                    document.getElementById("grp_height").style.display ="flex";
+                    if(flgChange) document.getElementById("height").value = "100";
+                }
+                //二次元バーコード
+                else
+                {
+                    if(drawType == "draw")
+                    {
+                        document.getElementById("grp_height").style.display ="flex";
+                        if(flgChange) document.getElementById("height").value = "300";
+                    }
+                    else
+                    {
+                        document.getElementById("grp_height").style.display ="none";
+                    }
+                }
+            }
+            else
+            {
+                // 郵便カスタマバーコード：幅は非表示、高さを表示（初期値30ピクセル）
+                document.getElementById("grp_width").style.display ="none";
+                document.getElementById("grp_height").style.display ="flex";
+                if(flgChange) document.getElementById("height").value = "30";
+            }
+        }
+        else
+        {
+            // drawDelicateモード：幅を表示
+            document.getElementById("grp_width").style.display ="flex";
+            document.getElementById("lbl_width").innerText = '描画最小ドット数';
+
+            // 一次元バーコード
+            if(kind != "QR" && kind != "DataMatrix" && kind != "PDF417")
+            {
+                document.getElementById("grp_height").style.display ="flex";
+                if(flgChange) document.getElementById("width").value = "2";
+                if(flgChange) document.getElementById("height").value = "100";
+            }
+            //二次元バーコード
+            else
+            {
+                document.getElementById("grp_height").style.display ="none";
+                if(flgChange)
+                {
+                    if(kind == "PDF417")
+                        document.getElementById("width").value = "4";
+                    else
+                        document.getElementById("width").value = "10";
+                }
+
+            }
+        }
+
+    }
+
+    function change_kind() {
+
+        const s_kind = sessionStorage.getItem("kind");
+        const kind = document.getElementById("kind").value;
+
+        // セッションにバーコードの種類をセット
+        sessionStorage.setItem("kind",kind);
+
+
+        //const kind = document.getElementById("kind").value;
+        const code = document.getElementById("code").value;
+        const width = document.getElementById("width").value;
+        const height = document.getElementById("height").value;
+        change_kind_disabled();
+
+        // 描画方法が変更されていなければ、初期「値」は設定しないで return;
+        if(s_kind != null && s_kind == kind)
+        {
+            change_drawType();
+            return;
+        }
+
+
+        if(kind == "gs1-128")
+        {
+            document.getElementById("code").value = "{FNC1}0104512345670016{AI}211";
+        }
+        else if(kind == "jan8")
+        {
+            document.getElementById("code").value = "1234567";
+        }
+        else if(kind == "jan13")
+        {
+            document.getElementById("code").value = "123456789012";
+        }
+        else if(kind == "UPC-A")
+        {
+            document.getElementById("code").value = "123456789012";
+        }
+        else if(kind == "UPC-E")
+        {
+            document.getElementById("code").value = "123456";
+        }
+        else if(kind == "gs1-Databar-14")
+        {
+            document.getElementById("code").value = "1491234567890";
+        }
+        else if(kind == "gs1-Databar-Limited")
+        {
+            document.getElementById("code").value = "1234567890123";
+        }
+        else if(kind == "gs1-Databar-Expanded")
+        {
+            document.getElementById("code").value = "0100012345678905{AI}10ABC123";
+            document.getElementById("typeDatabarExpanded").value = "Stacked";
+        }
+        else if(kind == "QR")
+        {
+            document.getElementById("code").value = "織田信長さん";
+        }
+        else if(kind == "DataMatrix")
+        {
+            document.getElementById("code").value = "豊臣秀吉さん";
+        }
+        else if(kind == "PDF417")
+        {
+            document.getElementById("code").value = "徳川家康さん";
+            // drawType は変更しない（ユーザーの選択を維持）
+        }
+        else if(kind == "yubin")
+        {
+            document.getElementById("code").value = "27500263-29-2-401";
+        }
+        else if(kind == "conv")
+        {
+            document.getElementById("code").value = "{FNC1}91912345000000000000004520875004013100295004";
+        }        else
+        {
+
+            if(kind == "code128"
+            || kind == "code39")
+            {
+                //if(code == null || code == "")
+                //{
+                    document.getElementById("code").value = "12345ABCDE";
+                //}
+            }
+            else
+            {
+                document.getElementById("code").value = "1234567890";
+            }
+
+            if(width == 0 && height == 0)
+            {
+                document.getElementById("width").value = 300;
+                document.getElementById("height").value = 100;
+            }
+
+        }
+        change_drawType();
+     }
+
+    function change_kind_disabled() {
+
+        const kind = document.getElementById("kind").value;
+
+        // すべての固有プロパティ領域を非表示
+        document.getElementById("grp_EscString").style.display ="none";
+        document.getElementById("grp_dispStartStopCode").style.display ="none";
+        document.getElementById("grp_qr").style.display ="none";
+        document.getElementById("grp_datamatrix").style.display ="none";
+        document.getElementById("grp_pdf417").style.display ="none";
+        document.getElementById("grp_encode").style.display ="none";
+        document.getElementById("grp_codeSet128").style.display ="none";
+        document.getElementById("grp_typeDatabar14").style.display ="none";
+        document.getElementById("grp_typeDatabarExpanded").style.display ="none";
+
+        // 入力候補ドロップダウンをすべて非表示
+        document.getElementById("grp_codeDatabarExpanded").style.display ="none";
+        document.getElementById("grp_codeGs1128").style.display ="none";
+        document.getElementById("grp_codeConv").style.display ="none";
+        document.getElementById("grp_codeYubin").style.display ="none";
+        document.getElementById("grp_codeDatabar14").style.display ="none";
+        document.getElementById("grp_codeDatabarLimited").style.display ="none";
+        document.getElementById("grp_codeDataMatrix").style.display ="none";
+
+        // 入力ヒント更新
+        const hintDiv = document.getElementById("inputHint");
+        if(hintDiv && barcodeHints[kind]) {
+            hintDiv.innerHTML = barcodeHints[kind];
+            hintDiv.style.display = "block";
+        } else if(hintDiv) {
+            hintDiv.style.display = "none";
+        }
+
+        // QR, DataMatrix, 郵便カスタマーバーコードはフォントサイズ不要
+        if(kind == "QR" || kind == "DataMatrix" || kind == "yubin") {
+            document.getElementById("grp_fontSize").style.display ="none";
+        } else {
+            document.getElementById("grp_fontSize").style.display ="flex";
+        }
+
+
+        document.getElementById("dispStartStopCode").disabled = true;
+        document.getElementById("codeSet128").disabled = true;
+        document.getElementById("typeDatabar14").disabled = true;
+        document.getElementById("typeDatabarExpanded").disabled = true;
+        document.getElementById("codeDatabarExpanded").disabled = true;
+
+
+        if(kind == "QR")
+        {
+            document.getElementById("grp_qr").style.display ="block";
+            document.getElementById("grp_encode").style.display ="block";
+        }
+        else if(kind == "DataMatrix")
+        {
+            document.getElementById("grp_datamatrix").style.display ="block";
+            document.getElementById("grp_encode").style.display ="block";
+            document.getElementById("grp_codeDataMatrix").style.display ="block";
+        }
+        else if(kind == "PDF417")
+        {
+            document.getElementById("grp_pdf417").style.display ="block";
+            document.getElementById("grp_encode").style.display ="block";
+            change_cols_rows_enabled();
+        }
+        else if(kind == "gs1-128")
+        {
+            document.getElementById("grp_codeSet128").style.display ="block";
+            document.getElementById("codeSet128").disabled = false;
+            document.getElementById("grp_codeGs1128").style.display ="block";
+            change_CodeSet128();
+        }
+        else if(kind == "code128")
+        {
+            document.getElementById("grp_codeSet128").style.display ="block";
+            document.getElementById("codeSet128").disabled = false;
+            change_CodeSet128();
+        }
+        else if(kind == "code39" || kind == "nw7")
+        {
+            document.getElementById("grp_dispStartStopCode").style.display ="block";
+            document.getElementById("dispStartStopCode").disabled = false;
+        }
+        else if(kind == "gs1-Databar-14")
+        {
+            document.getElementById("grp_typeDatabar14").style.display ="block";
+            document.getElementById("typeDatabar14").disabled = false;
+            document.getElementById("grp_codeDatabar14").style.display ="block";
+        }
+        else if(kind == "gs1-Databar-Limited")
+        {
+            document.getElementById("grp_codeDatabarLimited").style.display ="block";
+        }
+        else if(kind == "gs1-Databar-Expanded")
+        {
+            document.getElementById("grp_typeDatabarExpanded").style.display ="block";
+            document.getElementById("grp_codeDatabarExpanded").style.display ="block";
+            document.getElementById("typeDatabarExpanded").disabled = false;
+            document.getElementById("codeDatabarExpanded").disabled = false;
+        }
+        else if(kind == "conv")
+        {
+            document.getElementById("grp_codeConv").style.display ="block";
+        }
+        else if(kind == "yubin")
+        {
+            document.getElementById("grp_codeYubin").style.display ="block";
+        }
+
+     }
+
+     // 描画方法変更時の処理
+     function change_imageTransferMethod() {
+        const method = document.getElementById("browser_select").value;
+        const formatSelect = document.getElementById("format_select");
+        const includeMarginOptions = document.getElementById("includeMargin_options");
+
+        // SVGの場合、フォーマット選択をSVGに固定
+        if(method === "svg") {
+            formatSelect.value = "SVG";
+            formatSelect.disabled = true;
+            // SVG未対応チェックはサーバー側で行う（空文字が返された場合にエラー表示）
+        } else {
+            formatSelect.disabled = false;
+        }
+
+        // 画像ファイル渡し以外の場合、マージンチェックボックスを表示
+        if(method === "image_file") {
+            includeMarginOptions.style.display = "none";
+        } else {
+            includeMarginOptions.style.display = "block";
+        }
+
+        // 透明チェックボックスの状態を更新
+        updateTransparentCheckboxState();
+     }
+
+     // フォーマット変更時の処理
+     function change_imageFormat() {
+        const format = document.getElementById("format_select").value;
+        const browserSelect = document.getElementById("browser_select");
+
+        // SVGフォーマットの場合、描画方法をSVGに設定
+        if(format === "SVG") {
+            browserSelect.value = "svg";
+            change_imageTransferMethod();
+        }
+     }
+
+     // バーコードの色（前景色）をカラーピッカーからテキストに同期
+     function syncForeColor(colorValue) {
+        // #を除去して大文字に変換
+        const hexColor = colorValue.replace('#', '').toUpperCase();
+        document.getElementById("foreColor").value = hexColor;
+     }
+
+     // バーコードの色（前景色）をテキストからカラーピッカーに同期
+     function syncForeColorPicker(hexValue) {
+        // 有効な16進数カラーコードの場合のみ同期
+        if(/^[0-9A-Fa-f]{6}$/.test(hexValue)) {
+            document.getElementById("foreColorPicker").value = '#' + hexValue;
+        }
+     }
+
+     // 背景色をカラーピッカーからテキストに同期
+     function syncBackColor(colorValue) {
+        const hexColor = colorValue.replace('#', '').toUpperCase();
+        document.getElementById("backColor").value = hexColor;
+        // 背景色を変更したら透明チェックをOFFにする
+        document.getElementById("transparentBackground").checked = false;
+     }
+
+     // 背景色をテキストからカラーピッカーに同期
+     function syncBackColorPicker(hexValue) {
+        if(/^[0-9A-Fa-f]{6}$/.test(hexValue)) {
+            document.getElementById("backColorPicker").value = '#' + hexValue;
+        }
+        // 背景色を変更したら透明チェックをOFFにする
+        document.getElementById("transparentBackground").checked = false;
+     }
+
+     // 透明チェックボックス切り替え時の処理
+     // ※背景色入力は常に有効のまま（透明チェック時は透明が優先される）
+     function toggleTransparent() {
+        // 何もしない（両方入力可能にする）
+        // 透明がチェックされている場合は、バックエンドで透明を優先する
+     }
+
+     // 透明チェックボックスの有効/無効を画像形式に応じて設定
+     function updateTransparentCheckboxState() {
+        const method = document.getElementById("browser_select").value;
+        const format = document.getElementById("format_select").value;
+        const transparentCheckbox = document.getElementById("transparentBackground");
+
+        // SVGの場合は透明チェックボックスを無効化（SVGは透過非対応）
+        if(method === "svg" || format === "SVG") {
+            transparentCheckbox.disabled = true;
+            transparentCheckbox.checked = false;
+        } else {
+            // 画像データ渡し・画像ファイル渡し両方で透明チェックボックスを有効化
+            transparentCheckbox.disabled = false;
+            // ※JPEG/BMPの場合、ファイル保存時は透過が効かないが、チェックボックスは有効のまま
+            // （保存時にJPEG/BMPなら白背景になる）
+        }
+        // ※背景色入力は常に有効（透明チェック時は透明が優先されるだけ）
+     }
+
+     function change_CodeSet128() {
+
+
+
+        document.getElementById("grp_EscString").style.display ="none";
+        document.getElementById("EscString").disabled = true;
+
+        if(document.getElementById("codeSet128").value == ""
+        || document.getElementById("codeSet128").value == "A")
+        {
+            document.getElementById("grp_EscString").style.display ="flex";
+            document.getElementById("EscString").disabled = false;
+        }
+
+     }
+
+     function change_EscString() {
+
+        var strEsc = document.getElementById("EscString").value;
+        if(strEsc == "") return;
+
+        var code = document.getElementById("code").value;
+        code += "《" + strEsc + "》";
+        document.getElementById("code").value = code;
+
+    }
+
+
+    //バーコード画像ダウンロード
+    function downloadBarcodeImage() {
+        // 画像のURLを取得する
+        var barcodeImageUrl = document.getElementById('barcodeImage').src;
+        //var barcodeImageUrl = document.getElementById('barcode-image').src;
+
+        // フォーマット選択を確認
+        var formatSelect = document.getElementById('format_select');
+        var format = formatSelect ? formatSelect.value : "PNG";
+
+        // aタグを生成する
+        var a = document.createElement('a');
+        a.href = barcodeImageUrl;
+
+        // フォーマットに応じた拡張子でダウンロード
+        switch(format) {
+            case "SVG":
+                a.download = 'barcode.svg';
+                break;
+            case "JPEG":
+                a.download = 'barcode.jpg';
+                break;
+            case "BMP":
+                a.download = 'barcode.bmp';
+                break;
+            default:
+                a.download = 'barcode.png';
+                break;
+        }
+
+        // aタグをクリックしてダウンロードを実行する
+        a.click();
+      }
+
+      function ShowPDF() {
+        const modal = document.getElementById('modal');
+        modal.style.display = 'block';
+
+        const closeButton = modal.querySelector('.close');
+        closeButton.addEventListener('click', function() {
+          modal.style.display = 'none';
+        });
+      }
+
+      function ChangeDispDropDown()
+      {
+            // PDF出力チェックボックスの状態を取得する
+        var pdfCheckbox = document.getElementById("pdf");
+        var pdfEnabled = pdfCheckbox.checked;
+
+        // pdf_selectの表示・非表示を切り替える
+        var pdfSelect = document.getElementById("pdf_select");
+        pdfSelect.style.display = pdfEnabled ? "block" : "none";
+      }
+
+    // PDF出力チェックボックスの変更イベントを監視する
+    document.getElementById("pdf").addEventListener("change", function() {
+        ChangeDispDropDown();
+    });
+
+    // PDF417 COLS / ROWS Enable/Disable Change
+    function change_cols_rows_enabled() {
+        if(document.getElementById("pdf417SizeKind").value == "AUTO")
+        {
+            document.getElementById("pdf417Cols").disabled = true;
+            document.getElementById("pdf417Rows").disabled = true;
+        }
+        else if(document.getElementById("pdf417SizeKind").value == "COL_NUM")
+        {
+            document.getElementById("pdf417Cols").disabled = false;
+            document.getElementById("pdf417Rows").disabled = true;
+        }
+        else if(document.getElementById("pdf417SizeKind").value == "ROW_NUM")
+        {
+            document.getElementById("pdf417Cols").disabled = true;
+            document.getElementById("pdf417Rows").disabled = false;
+        }
+        else
+        {
+            document.getElementById("pdf417Cols").disabled = false;
+            document.getElementById("pdf417Rows").disabled = false;
+        }
+     }
+
+
+// 「ヘルプ」モーダルウィンドウの表示/非表示を切り替える関数
+function toggleModalHelp() {
+    const modalOverlay = document.querySelector('.modal-overlay');
+    const modal = document.querySelector('#modal_help .modal_help');
+
+    // showクラスを持っている場合に限り、モーダルウィンドウの表示/非表示を切り替える
+    // 背景オーバーレイの表示/非表示状態を判断してから、モーダルウィンドウの表示/非表示を切り替える
+    if (modalOverlay.classList.contains('show')) {
+      modalOverlay.classList.remove('show');
+      modal.classList.remove('show');
+    } else {
+      modalOverlay.classList.add('show');
+      modal.classList.add('show');
+    }
+  }
+
+  // 「?ヘルプ?」ボタンをクリックしたときの処理
+  const modalTrigger = document.querySelector('#modal-help-trigger');
+  modalTrigger.addEventListener('click', toggleModalHelp);
+
+  // モーダルオーバーレイをクリックしたときの処理
+  const modalOverlays = document.querySelectorAll('.modal-overlay');
+  modalOverlays.forEach((overlay) => {
+    overlay.addEventListener('click', (event) => {
+      const activeModals = document.querySelectorAll('.modal.show');
+      activeModals.forEach((modal) => {
+        if (modal.parentElement === event.target.parentElement) {
+          modal.classList.remove('show');
+        }
+      });
+      const activeOverlays = document.querySelectorAll('.modal-overlay.show');
+      activeOverlays.forEach((overlay) => {
+        if (overlay !== event.target) {
+          overlay.classList.remove('show');
+        }
+      });
+    });
+  });
+
+  // モーダルを閉じるための処理
+  const modalClose = document.querySelectorAll('.close');
+  modalClose.forEach((closeButton) => {
+    closeButton.addEventListener('click', () => {
+      const activeModals = document.querySelectorAll('.modal.show');
+      activeModals.forEach((modal) => {
+        modal.classList.remove('show');
+      });
+      const activeOverlays = document.querySelectorAll('.modal-overlay.show');
+      activeOverlays.forEach((overlay) => {
+        overlay.classList.remove('show');
+      });
+    });
+  });
+
+  // フォーム送信時の検証
+  function validateForm() {
+    const imageTransferMethod = document.getElementById('browser_select').value;
+    const drawType = document.getElementById('drawType').value;
+
+    // SVG出力時に drawDelicate は非対応
+    if (imageTransferMethod === 'svg' && drawType === 'drawDelicate') {
+      alert('SVGでは「最小描画単位指定で直接描画」はサポートされていません。');
+      return false;
+    }
+
+    return true;
+  }
+
+</script>
+
+
+</body>
+</html>
