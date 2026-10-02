@@ -4,8 +4,8 @@
 
 <p align="center">
   <a href="https://central.sonatype.com/artifact/ac.pao/barcode-jar"><img src="https://img.shields.io/maven-central/v/ac.pao/barcode-jar?label=Maven%20Central&color=f89820" alt="Maven Central"></a>
-  <img src="https://img.shields.io/badge/Java-8%2B-5382a1" alt="Java 8+">
-  <img src="https://img.shields.io/badge/Spring%20Boot-2.7-6db33f" alt="Spring Boot 2.7">
+  <img src="https://img.shields.io/badge/Java-17%2B-5382a1" alt="Java 17+">
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.5.16-6db33f" alt="Spring Boot 3.5.16">
   <img src="https://img.shields.io/badge/PDF-Apache%20PDFBox-d22128" alt="Apache PDFBox">
   <a href="LICENSE"><img src="https://img.shields.io/badge/sample%20code-MIT-blue" alt="MIT"></a>
 </p>
@@ -29,11 +29,20 @@ docker compose up -d --build        # Docker で起動
 
 ブラウザで **http://localhost:5000/barcode** を開きます。止めるときは `docker compose down` です。
 
-Docker を使わない場合は、Java 8 以降で次のとおりです。
+Docker を使わない場合は、Java 17 以降で次のとおりです。
 
 ```bash
 ./gradlew bootRun                   # Windows は gradlew.bat bootRun
 ```
+
+## Java の版とサンプル
+
+| Java の版 | 画面（デスクトップ）のサンプル | Web のサンプル | 入手先 |
+|---|---|---|---|
+| Java 17 以上 | JavaFX 21.0.6（[barcode-jar/javafx](https://github.com/barcode-jar/javafx)） | Spring Boot 3.5.16（このリポジトリ） | GitHub・体験版 ZIP（barcode.jar.17.zip） |
+| Java 8・11 | Swing | Spring Boot 2.7.18 | [体験版 ZIP](https://www.pao.ac/barcode.jar/)（barcode.jar.8.zip・barcode.jar.11.zip） |
+
+このリポジトリは Spring Boot 3.5.16・Java 17 以上です。Java 8・11 では Spring Boot 3 が動かないため、Spring Boot 2.7.18 の版を体験版 ZIP に入れています。PDF は、どちらも Apache PDFBox 3.0.8 で作ります。
 
 ## 対応バーコード（20 種類）
 
@@ -119,10 +128,14 @@ PDF は [Apache PDFBox](https://pdfbox.apache.org/)（Apache License 2.0）で�
 
 ```bash
 git clone https://github.com/barcode-jar/springboot.git && cd springboot
-docker compose up -d --build     # or: ./gradlew bootRun  (Java 8+)
+docker compose up -d --build     # or: ./gradlew bootRun  (Java 17+)
 ```
 
 Open **http://localhost:5000/barcode**.
+
+### Java versions
+
+Java 17+: this repository (Spring Boot 3.5.16) and the [JavaFX sample](https://github.com/barcode-jar/javafx). Java 8 / 11: Spring Boot 2.7.18 and Swing samples are in the [trial ZIP](https://www.pao.ac/barcode.jar/) (barcode.jar.8.zip / barcode.jar.11.zip).
 
 ### Use it in your project
 
