@@ -15,8 +15,9 @@ repositories {
 dependencies {
 	// Barcode.jar（体験版。出力に「SAMPLE」の印が付きます）
 	implementation 'ac.pao:barcode-jar:5.3.1'
-	// PDF 出力のサンプルで使用（iText 5 は AGPL です）
-	implementation 'com.itextpdf:itextpdf:5.5.13.3'
+	// PDF 出力（Apache PDFBox と、Graphics2D で PDF に描く pdfbox-graphics2d。どちらも Apache License 2.0）
+	implementation 'org.apache.pdfbox:pdfbox:3.0.8'
+	implementation 'de.rototor.pdfbox:graphics2d:3.0.5'
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'

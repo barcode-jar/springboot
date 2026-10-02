@@ -4,7 +4,6 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Base64;
@@ -15,12 +14,14 @@ import javax.imageio.ImageIO;
 
 import java.awt.image.BufferedImage;
 
-import com.itextpdf.awt.PdfGraphics2D;
-import com.itextpdf.awt.geom.AffineTransform;
-import com.itextpdf.text.*;
-import com.itextpdf.text.pdf.PdfContentByte;
-import com.itextpdf.text.pdf.PdfTemplate;
-import com.itextpdf.text.pdf.PdfWriter;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.form.PDFormXObject;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+
+import de.rototor.pdfbox.graphics2d.PdfBoxGraphics2D;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -129,77 +130,51 @@ public class BarcodeUtil {
      // バーコードイメージを PDFに埋め込む
     public void generateBarcodePdfByImageFile(BarcodeForm form) throws Exception {
 
-        //文書オブジェクトを生成
-		Document doc = new Document(PageSize.A4, 50, 50, 50, 50);
-		
-		//出力先(アウトプットストリーム)の生成
-		FileOutputStream fos = new FileOutputStream(PDF_PATH + "barcode.pdf");
-		
-		//アウトプットストリームをPDFWriterに設定
-		PdfWriter pdfwriter = PdfWriter.getInstance(doc, fos);
-		
-		//文章オブジェクト オープン
-		doc.open();
+        // A4 縦の文書を作成
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            doc.addPage(page);
 
-        //Imageインスタンスの作成
-        // 速度アップのため static は、リロードが遅いので使わない。
-		//Image img = Image.getInstance(STATIC_PATH + "barcode_pdf.png");
-        URL  imgURL = null;
-        imgURL = new File(IMG_PATH + "barcode_pdf.png").toURI().toURL();
-        Image img = Image.getInstance(imgURL);
+            // 速度アップのため static は、リロードが遅いので使わない。
+            PDImageXObject img = PDImageXObject.createFromFile(IMG_PATH + "barcode_pdf.png", doc);
+            int w = img.getWidth();
+            int h = img.getHeight();
 
-        int h = (int)img.getHeight();
-        int w = (int)img.getWidth();
+            // 表示位置の設定(PDF は左下が原点のため、Y 座標を反転)
+            float pageHeight = page.getMediaBox().getHeight();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                cs.drawImage(img, form.getX(), pageHeight - form.getY() - h, w, h);
+            }
 
-        
-
-        //表示位置の設定(左下がY座標原点のためY座標反転してまず)
-		img.setAbsolutePosition(form.getX() , doc.getPageSize().getHeight() - form.getY() - h);
-		
-		//表示サイズの設定
-		img.scaleAbsolute(w, h);
-		
-		//PdfContentByteの取得
-		PdfContentByte pdfContentByte = pdfwriter.getDirectContent();
-		
-		//文章に画像を追加する
-		pdfContentByte.addImage(img);
-
-        //文章オブジェクト クローズ
-		doc.close();
-		
-		//PDFWriter クローズ
-		pdfwriter.close();
-		
+            doc.save(new File(PDF_PATH + "barcode.pdf"));
+        }
     }
 
     // Graphics2D で PDFにバーコードを描画
     public void generateBarcodePdfByGraphics(BarcodeForm form) throws Exception {
- 
-        float pdfWidth = PageSize.A4.getHeight();
-        float pdfHeight = PageSize.A4.getWidth();
 
-        //文書オブジェクトを生成
-        Document doc = new Document(new Rectangle(pdfWidth, pdfHeight));
-        
-		//アウトプットストリームをPDFWriterに設定
-        PdfWriter pdfwriter = PdfWriter.getInstance(
-            doc, new FileOutputStream(PDF_PATH + "barcode.pdf"));
-		
-		//文章オブジェクト オープン
-		doc.open();
+        // A4 横
+        float pdfWidth = PDRectangle.A4.getHeight();
+        float pdfHeight = PDRectangle.A4.getWidth();
 
-        PdfContentByte canvas = pdfwriter.getDirectContent();
-        PdfTemplate template = canvas.createTemplate(pdfWidth, pdfHeight);
-        Graphics2D g2d = new PdfGraphics2D(template, pdfWidth, pdfHeight);
+        try (PDDocument doc = new PDDocument()) {
+            PDPage page = new PDPage(new PDRectangle(pdfWidth, pdfHeight));
+            doc.addPage(page);
 
-        // バーコード描画 - ここにバーコード描画ロジック全てが詰まっています。
-        drawBarcode(g2d, form, Color.WHITE);
+            // PDF に描画する Graphics2D(左上が原点、1 単位 = 1pt)
+            PdfBoxGraphics2D g2d = new PdfBoxGraphics2D(doc, pdfWidth, pdfHeight);
 
-        g2d.dispose();
-        canvas.addTemplate(template, 0, 0);
-        doc.close();
-		pdfwriter.close();
+            // バーコード描画 - ここにバーコード描画ロジック全てが詰まっています。
+            drawBarcode(g2d, form, Color.WHITE);
+
+            g2d.dispose();
+            PDFormXObject xform = g2d.getXFormObject();
+            try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
+                cs.drawForm(xform);
+            }
+
+            doc.save(new File(PDF_PATH + "barcode.pdf"));
+        }
     }
 
     public String toBase64String(BufferedImage image, String type) throws IOException {
