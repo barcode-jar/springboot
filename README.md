@@ -61,7 +61,7 @@ Docker を使わない場合は、Java 17 以降で次のとおりです。
 
 ```gradle
 dependencies {
-    implementation 'ac.pao:barcode-jar:5.3.1'
+    implementation 'ac.pao:barcode-jar:5.3.2'
 }
 ```
 
@@ -71,7 +71,7 @@ dependencies {
 <dependency>
   <groupId>ac.pao</groupId>
   <artifactId>barcode-jar</artifactId>
-  <version>5.3.1</version>
+  <version>5.3.2</version>
 </dependency>
 ```
 
@@ -140,7 +140,7 @@ Java 17+: this repository (Spring Boot 3.5.16) and the [JavaFX sample](https://g
 ### Use it in your project
 
 ```gradle
-implementation 'ac.pao:barcode-jar:5.3.1'
+implementation 'ac.pao:barcode-jar:5.3.2'
 ```
 
 ```java

@@ -16,7 +16,7 @@ repositories {
 
 dependencies {
 	// Barcode.jar（体験版。出力に「SAMPLE」の印が付きます）
-	implementation 'ac.pao:barcode-jar:5.3.1'
+	implementation 'ac.pao:barcode-jar:5.3.2'
 	// PDF 出力（Apache PDFBox と、Graphics2D で PDF に描く pdfbox-graphics2d。どちらも Apache License 2.0）
 	implementation 'org.apache.pdfbox:pdfbox:3.0.8'
 	implementation 'de.rototor.pdfbox:graphics2d:3.0.5'
