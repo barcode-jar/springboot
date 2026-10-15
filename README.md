@@ -32,7 +32,7 @@ docker compose up -d --build        # Docker で起動
 Docker を使わない場合は、Java 17 以降で次のとおりです。
 
 ```bash
-./gradlew bootRun                   # Windows は gradlew.bat bootRun
+./gradlew bootRun                   # Windows は .\gradlew.bat bootRun
 ```
 
 ## Java の版とサンプル
